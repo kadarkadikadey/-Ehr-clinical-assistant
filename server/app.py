@@ -5,7 +5,12 @@ from schema import Action, Observation
 from tasks import TASK_REGISTRY
 
 # Initialize FastAPI app
-app = FastAPI(title="EHR Clinical Assistant")
+app = FastAPI(
+    title="EHR Clinical Assistant",
+    root_path="/",  # Forces the app to recognize the root
+    docs_url="/docs",
+    openapi_url="/openapi.json"
+)
 
 class EHR_Environment:
     def __init__(self):
@@ -87,7 +92,14 @@ class EHR_Environment:
 env = EHR_Environment()
 
 # --- FastAPI Endpoints ---
-
+@app.get("/")
+async def root():
+    return {
+        "message": "EHR Clinical Assistant API is Live",
+        "status": "Running",
+        "docs": "/docs"
+    }
+    
 @app.post("/reset")
 async def reset_endpoint(request: Request):
     # Flexible parsing: handles raw string or JSON body {"task_id": "..."}

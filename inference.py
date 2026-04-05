@@ -4,8 +4,9 @@ import json
 import textwrap
 from typing import List, Optional
 from openai import OpenAI
-from server.app import EHR_Environment
+
 # These imports must match your schema.py and app.py
+from server.app import EHR_Environment
 from schema import Action
 from reward_model import RewardPredictor, extract_features
 

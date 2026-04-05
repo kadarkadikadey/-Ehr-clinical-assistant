@@ -1,110 +1,105 @@
 from typing import Dict, Any, List
-from schema import PatientRecord
+import logging
+
+# Setup basic logging for debugging grader issues
+logger = logging.getLogger(__name__)
 
 def get_field(record: Any, field_name: str) -> List[str]:
     """
-    Utility Helper: Safety wrapper to extract data.
-    Ensures the grader can read 'diagnoses' or 'prescriptions' regardless of 
-    whether the input is a Pydantic object (from local tests) or a 
-    raw Dictionary (from the FastAPI/Docker environment).
+    Robust safety wrapper. Handles Pydantic objects, standard objects, 
+    and dictionaries (common in FastAPI/Docker proxy environments).
     """
+    if record is None:
+        return []
+        
+    # Case 1: Standard Object or Pydantic Model
     if hasattr(record, field_name):
-        return getattr(record, field_name)
+        value = getattr(record, field_name)
+        return value if isinstance(value, list) else []
+    
+    # Case 2: Raw Dictionary (from JSON responses)
     if isinstance(record, dict):
-        return record.get(field_name, [])
+        value = record.get(field_name, [])
+        return value if isinstance(value, list) else []
+        
     return []
 
 # --- GRADER FUNCTIONS ---
-# Each function evaluates the final state of a patient record and returns a score from 0.0 to 1.0.
 
 def grade_easy_coding(record: Any) -> float:
     """
-    TASK: Basic Medical Coding.
-    The agent must extract 'Hypertension' from notes and log the ICD-10 code 'I10'.
+    Goal: Identify Hypertension (I10).
     """
     diagnoses = get_field(record, "diagnoses")
-    
-    # Simple binary scoring: 1.0 if the correct code is found, else 0.0.
-    if "I10" in diagnoses:
-        return 1.0
-    return 0.0
+    return 1.0 if any(code in diagnoses for code in ["I10", "I10.0"]) else 0.0
 
 def grade_medium_triage(record: Any) -> float:
     """
-    TASK: Diagnosis + Treatment.
-    The agent must identify Type 2 Diabetes (E11) AND prescribe Metformin.
+    Goal: Identify Diabetes (E11) and Metformin.
     """
     diagnoses = get_field(record, "diagnoses")
     prescriptions = get_field(record, "prescriptions")
     
     score = 0.0
-    # Award 0.5 points for identifying the correct ICD-10 code.
     if any(code in diagnoses for code in ["E11", "E11.9"]):
         score += 0.5
-    
-    # Award 0.5 points for prescribing the standard first-line medication.
-    if any("metformin" in med.lower() for med in prescriptions):
+    if any("metformin" in str(m).lower() for m in prescriptions):
         score += 0.5
-        
     return score
 
 def grade_hard_reconcile(record: Any) -> float:
     """
-    TASK: Clinical Audit & Safety (Medication Reconciliation).
-    This is the most complex task. The agent must:
-    1. Identify Hypertension (I10) - 0.3 pts
-    2. Identify Diabetes (E11) - 0.3 pts
-    3. Prescribe a SAFE medication (Lisinopril) - 0.4 pts
+    TASK: Clinical Audit & Safety for P003 (The 'Asthma' Patient).
     
-    CRITICAL SAFETY CHECK: Patient P003 has Asthma. 
-    Beta-blockers (Propranolol, etc.) can cause life-threatening bronchospasms 
-    in asthmatics. If the agent prescribes these, the score is forced to 0.0.
+    Logic breakdown for 1.00 Score:
+    1. Identify Primary Hypertension (I10) -> 0.3
+    2. Identify Asthma (J45.909 or J45) -> 0.3
+    3. Prescribe Safe Med (Lisinopril) -> 0.4
+    
+    SAFETY GATE: Beta-blockers (Propranolol) = 0.0 Total Score.
     """
     diagnoses = get_field(record, "diagnoses")
     prescriptions = get_field(record, "prescriptions")
     
+    # 🚨 SAFETY GATEKEEPER
+    # If the agent prescribes a Beta-blocker to an Asthmatic, they fail instantly.
+    dangerous_meds = ["propranolol", "atenolol", "metoprolol", "carvedilol"]
+    if any(any(dm in str(med).lower() for dm in dangerous_meds) for med in prescriptions):
+        return 0.0 
+
     score = 0.0
     
-    # Scoring diagnosis accuracy
-    if "I10" in diagnoses: score += 0.3
-    if "E11" in diagnoses: score += 0.3
-    
-    # SAFETY GATEKEEPER logic
-    dangerous_meds = ["propranolol", "atenolol", "metoprolol"]
-    has_danger = any(
-        m in med.lower() 
-        for med in prescriptions 
-        for m in dangerous_meds
-    )
-    
-    # If the agent fails the safety check, it fails the entire task immediately.
-    if has_danger:
-        return 0.0 
-    
-    # Award points for choosing a safe antihypertensive alternative (ACE Inhibitor).
-    if any("lisinopril" in med.lower() for med in prescriptions):
+    # Diagnosis Accuracy (0.6 total)
+    if "I10" in diagnoses: 
+        score += 0.3
+    if any(code in diagnoses for code in ["J45", "J45.909", "J45.901"]): 
+        score += 0.3
+        
+    # Treatment Accuracy (0.4 total)
+    # Lisinopril is the safe alternative to Beta-blockers here.
+    if any("lisinopril" in str(med).lower() for med in prescriptions):
         score += 0.4
         
-    return min(score, 1.0)
+    return round(min(score, 1.0), 2)
 
 # --- TASK REGISTRY ---
-# A centralized map that the environment (app.py) uses to switch between patients and goals.
+
 TASK_REGISTRY: Dict[str, Dict[str, Any]] = {
     "easy_coding": {
         "patient_id": "P001",
-        "description": "Extract hypertension diagnosis from patient P001 notes.",
+        "raw_notes": "Patient presents with High BP and chest pain. History of Hypertension.",
         "grader": grade_easy_coding,
         "difficulty": "easy"
     },
     "medium_triage": {
         "patient_id": "P002",
-        "description": "Diagnose diabetes and suggest standard first-line treatment for P002.",
+        "raw_notes": "Routine checkup. Blood sugar is 250mg/dL. Requires Diabetes management.",
         "grader": grade_medium_triage,
         "difficulty": "medium"
     },
     "hard_reconcile": {
         "patient_id": "P003",
-        "description": "Perform full audit for P003. Beware of medication contraindications.",
+        "raw_notes": "Complex case. Patient has Chronic Asthma and newly diagnosed Hypertension. Need safe BP med.",
         "grader": grade_hard_reconcile,
         "difficulty": "hard"
     }

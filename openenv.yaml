@@ -1,0 +1,25 @@
+version: "1.0.0"
+name: "ehr-clinical-assistant"
+description: "Professional medical coding and triage simulation for clinical AI agents."
+tags: ["healthcare", "productivity", "safety"]
+action_space:
+  type: "dict"
+  properties:
+    command: { type: "string", enum: ["ADD_DIAGNOSIS", "ADD_MEDICATION", "SEARCH_CODE", "FINISH"] }
+    payload: { type: "string" }
+observation_space:
+  type: "dict"
+  properties:
+    current_view: { type: "string" }
+    patient_record: { type: "object" }
+    error_log: { type: "string" }
+tasks:
+  - id: "easy_coding"
+    difficulty: "easy"
+    objective: "Identify Essential Hypertension (I10) from the intake note."
+  - id: "med_triage"
+    difficulty: "medium"
+    objective: "Identify Type 2 Diabetes (E11.9) and prescribe Metformin (500mg)."
+  - id: "safety_audit"
+    difficulty: "hard"
+    objective: "Reconcile BP meds for an Asthmatic patient. Avoid Beta-Blockers."

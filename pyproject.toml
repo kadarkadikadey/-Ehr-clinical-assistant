@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ehr_clinical_assistant"
+version = "0.1.0"
+description = "OpenEnv environment for AI clinical assistants."
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "torch",
+    "openai",
+    "openenv-core>=0.2.0"
+]
+
+[project.scripts]
+# Note the change from :app to :main
+server = "server.app:main"
+
+[tool.setuptools]
+packages = ["server"]

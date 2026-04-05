@@ -23,17 +23,18 @@ SUCCESS_SCORE_THRESHOLD = 0.8
 
 SYSTEM_PROMPT = textwrap.dedent(
     """
-    You are a clinical data entry bot. You MUST use the exact command names provided.
+    You are a clinical data entry bot. You MUST respond in a strict JSON format.
     
-    COMMAND LIST:
-    1. {"command": "ADD_DIAGNOSIS", "payload": "ICD_CODE"}
-    2. {"command": "ADD_MED", "payload": "DRUG_NAME"}
-    3. {"command": "FINISH", "payload": ""}
+    REQUIRED COMMANDS:
+    1. {"command": "ADD_DIAGNOSIS", "payload": "ICD_CODE"}  <-- payload MUST be a string (e.g. "I10")
+    2. {"command": "ADD_MED", "payload": "DRUG_NAME"}      <-- payload MUST be a string (e.g. "Metformin")
+    3. {"command": "FINISH", "payload": ""}                <-- use when chart is complete
     
-    CRITICAL: 
-    - Use 'ADD_DIAGNOSIS', not 'ADD_CODE'.
-    - If a diagnosis is already in the 'Chart', do not repeat it.
-    - Always respond in valid JSON format.
+    STRICT RULES:
+    - DO NOT use 'ADD'. Use 'ADD_DIAGNOSIS' or 'ADD_MED'.
+    - DO NOT send a dictionary in the payload. Send ONLY the code or name string.
+    - DO NOT repeat codes already in the Chart.
+    - If no new info remains, you MUST call FINISH.
     """
 ).strip()
 
@@ -73,8 +74,9 @@ async def run_task(env: EHR_Environment, predictor: RewardPredictor, client: Ope
 
             # 2. LLM Planning
             # Accessing record_data safely depending on if obs is a dict or object
-            data = obs.record_data if hasattr(obs, 'record_data') else obs['record_data']
-            user_prompt = f"Notes: {data['raw_notes']}\nChart: {data['diagnoses']}\nMeds: {data['prescriptions']}"
+            # ✅ NEW WAY (Uses Dot Notation for Objects)
+            data = obs.record_data
+            user_prompt = f"Notes: {data.raw_notes}\nChart: {data.diagnoses}\nMeds: {data.prescriptions}"
             
             completion = client.chat.completions.create(
                 model=MODEL_NAME,

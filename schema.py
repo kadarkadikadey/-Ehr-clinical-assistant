@@ -15,8 +15,8 @@ class Observation(BaseModel):
     error_message: Optional[str] = None
 
 class Action(BaseModel):
-    command: str = Field(..., description="SEARCH, ADD_DIAGNOSIS, ADD_MED, or FINISH")
-    payload: str = Field(..., description="The data for the command (e.g., 'ICD-10 code' or 'Patient Name')")
+    command: str
+    payload: str
 
 class Reward(BaseModel):
     value: float

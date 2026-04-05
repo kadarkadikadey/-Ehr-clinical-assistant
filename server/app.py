@@ -1,16 +1,20 @@
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from typing import Optional, List, Dict, Any
+import os    # Required for os.path
+import sys   # Required for sys.path
+
+# This allows 'server/app.py' to see 'schema.py' in the parent folder
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Now your other imports will work
+from schema import Action, Observation
+
 from schema import Action, Observation
 from tasks import TASK_REGISTRY
 
 # Initialize FastAPI app
-app = FastAPI(
-    title="EHR Clinical Assistant",
-    root_path="/",  # Forces the app to recognize the root
-    docs_url="/docs",
-    openapi_url="/openapi.json"
-)
+app = FastAPI(title="EHR Clinical Assistant")
 
 class EHR_Environment:
     def __init__(self):
@@ -92,14 +96,7 @@ class EHR_Environment:
 env = EHR_Environment()
 
 # --- FastAPI Endpoints ---
-@app.get("/")
-async def root():
-    return {
-        "message": "EHR Clinical Assistant API is Live",
-        "status": "Running",
-        "docs": "/docs"
-    }
-    
+
 @app.post("/reset")
 async def reset_endpoint(request: Request):
     # Flexible parsing: handles raw string or JSON body {"task_id": "..."}

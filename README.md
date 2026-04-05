@@ -114,17 +114,17 @@ To evaluate an AI agent against this environment, use the provided `inference.py
    ```
 
 2. **Execute the Inference Script**:
-  ```bash
-  python inference.py
-  ```
+   ```bash
+   python inference.py
+   ```
 3. **Docker**:
-    ```bash
-    # 1. Build the image
-    docker build -t ehr-assistant .
+   ```bash
+   # 1. Build the image
+   docker build -t ehr-assistant .
 
-    # 2. Run the container on the standard OpenEnv port
-    docker run -p 7860:7860 ehr-assistant
-    ```
+   # 2. Run the container on the standard OpenEnv port
+   docker run -p 7860:7860 ehr-assistant
+   ```
 
 ### Technical Stack
 1. **FastAPI** : High-performance asynchronous framework for the OpenEnv API layer.
